@@ -1,4 +1,5 @@
 from shapely.geometry import Point, Polygon
+from shapely.ops import unary_union
 
 class Sensor:
     def __init__(self, x, y, radius):
@@ -21,9 +22,9 @@ class SensorGrid:
             print(f"Warning: Sensor at {sensor.position} is outside the area.")
 
     def covered_area(self):
-        """Return the union of all sensor coverage areas"""
-        from shapely.ops import unary_union
-        return unary_union([s.coverage_area for s in self.sensors])
+        raw_union = unary_union([s.coverage_area for s in self.sensors])
+        return raw_union.intersection(self.area)
+
 
     def uncovered_area(self):
         """Return the part of the area not covered by any sensor"""

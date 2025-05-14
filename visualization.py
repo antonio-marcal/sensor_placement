@@ -1,5 +1,4 @@
 import matplotlib.pyplot as plt
-from descartes import PolygonPatch
 
 from project_classes import Sensor, SensorGrid
 from shapely.geometry import Polygon
@@ -41,6 +40,7 @@ grid.add_sensor(Sensor(7, 2, 3))
 grid.add_sensor(Sensor(15, 5, 2))  # Will print a warning
 
 print(f"Covered area: {grid.covered_area().area}")
+print(f"Percentage of covered area: {grid.covered_area().area / grid.area.area * 100:.2f}%")
 print(f"Uncovered area: {grid.uncovered_area().area}")
 
 
