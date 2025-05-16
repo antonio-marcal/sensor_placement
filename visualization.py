@@ -26,22 +26,30 @@ def plot_grid(grid: SensorGrid):
 
         ax.plot(sensor.position.x, sensor.position.y, 'bo')
 
-    ax.set_xlim(-5, 20)
-    ax.set_ylim(-5, 20)
+    # ax.set_xlim(-5, 20)
+    # ax.set_ylim(-5, 20)
     ax.set_aspect('equal')
     plt.show()
 
 # Define the area (e.g., an irregular polygon)
 area = Polygon([(0, 0), (10, 0), (8, 8), (2, 10), (0, 5)])
 
-grid = SensorGrid(area)
-grid.add_sensor(Sensor(3, 4, 2))
-grid.add_sensor(Sensor(7, 2, 3))
-grid.add_sensor(Sensor(15, 5, 2))  # Will print a warning
+k = 3
+d = 2
+delta = 0
+t = (0, 0)
+range = 1.5
+
+grid = SensorGrid(area, base_range=range)
+grid.create_hexagonal_grid(d=d, delta=delta, t=t)
+
+print(f"Number of sensors: {len(grid.sensors)}")
+print(f"Missed sensors: {grid.missed_sensors}")
 
 print(f"Covered area: {grid.covered_area().area}")
 print(f"Percentage of covered area: {grid.covered_area().area / grid.area.area * 100:.2f}%")
 print(f"Uncovered area: {grid.uncovered_area().area}")
 
+print(f"Percentage of k-covered area (k = {k}): {grid.k_covered_area(k) / grid.area.area * 100:.2f}%")
 
 plot_grid(grid)
