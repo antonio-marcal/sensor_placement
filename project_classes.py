@@ -1,6 +1,8 @@
 from shapely.geometry import Point, Polygon, MultiPoint
 from shapely.ops import unary_union
 
+from collections import deque
+
 import numpy as np
 import math
 
@@ -27,7 +29,7 @@ class SensorGrid:
         else:
             self.missed_sensors += 1
 
-    def create_square_grid(self, d: float, delta: float = 0, t: tuple = (0, 0)):
+    def create_square_grid(self, d: float, delta: float = 0, t: tuple = (0, 0), k: int = 1):
         """
         Create a square grid of sensors within the area.
         
@@ -35,6 +37,7 @@ class SensorGrid:
         d (float): Distance between sensors.
         delta (float): Rotation of the grid.
         t (tuple): Translation of the grid.
+        k (int): Number of sensors per square region. (not used for this function, only to keep the interface consistent)
         """
         # Calculate the bounding box of the area
         min_x, min_y, max_x, max_y = self.area.bounds
@@ -77,48 +80,78 @@ class SensorGrid:
         Create a triangular-based hexagonal grid of sensors.
 
         Parameters:
-        d (float): Side length of equilateral triangles.
+        d (float): Gap between sensors.
         delta (float): Rotation of the grid.
         t (tuple): Translation of the grid.
         k (int): Number of sensors per hexagonal region.
         """
         # Bounding box
         min_x, min_y, max_x, max_y = self.area.bounds
-        width = max_x - min_x
-        height = max_y - min_y
+        
+        # Adjust to keep sensors from levaing blank spots when rotating
+        min_x -= (max_x - min_x) * 0.2
+        min_y -= (max_y - min_y) * 0.2
+        max_x += (max_x - min_x) * 0.2
+        max_y += (max_y - min_y) * 0.2
+
+        def is_within_bounds(x, y):
+            return min_x <= x <= max_x and min_y <= y <= max_y
 
         # Height of equilateral triangle
-        tri_height = d * math.sqrt(3) / 2
+        tri_side = self.base_range / 3
+        tri_height = math.sqrt(3) * self.base_range/ 6
 
-        # Loop through rows and columns to generate triangle grid
-        row = 0
-        y = min_y
-        while y < max_y:
-            x_offset = 0 if row % 2 == 0 else d / 2
-            x = min_x
-            while x < max_x:
-                # Create upright triangle
-                p1 = (x + x_offset, y)
-                p2 = (x + x_offset + d / 2, y + tri_height)
-                p3 = (x + x_offset + d, y)
-                triangle = Polygon([p1, p2, p3])
-                if self.area.intersects(triangle):
-                    self.add_sensor(Sensor(*triangle.centroid.coords[0], self.base_range))
+        delta = math.radians(delta)
+        cos_theta = math.cos(delta)
+        sin_theta = math.sin(delta)
 
-                # Create upside-down triangle
-                p1_down = (x + x_offset + d / 2, y + tri_height)
-                p2_down = (x + x_offset + d, y + 2 * tri_height)
-                p3_down = (x + x_offset, y + 2 * tri_height)
-                triangle_down = Polygon([p1_down, p2_down, p3_down])
-                if self.area.intersects(triangle_down):
-                    self.add_sensor(Sensor(*triangle_down.centroid.coords[0], self.base_range))
+        center_x = (min_x + max_x) / 2
+        center_y = (min_y + max_y) / 2
 
-                x += d
+        hexagons = set()
+        hexagons_queue = deque()
 
-            y += tri_height
-            row += 1
+        hexagons_queue.append((min_x, min_y))
+
+        while hexagons_queue:
+            
+            x, y = hexagons_queue.popleft()
+
+            if (round(x, 4), round(y, 4)) not in hexagons and is_within_bounds(x, y):
+                hexagons.add((round(x, 4), round(y, 4)))
+
+                # Translate to origin for rotation
+                x_shifted = x - center_x
+                y_shifted = y - center_y
+
+                # Rotate around the centre
+                x_rot = x_shifted * cos_theta - y_shifted * sin_theta
+                y_rot = x_shifted * sin_theta + y_shifted * cos_theta
+
+                G_x, G_y = x_rot + center_x + t[0], y_rot + center_y + t[1]
+                H_x, H_y = G_x + (tri_side / 2), G_y - (tri_height)
+                
+                dx = H_x - G_x
+                dy = H_y - G_y
+
+                # TODO: Fix this. It's terrible.
+                num_points = min(k, int(tri_side // d) + 1)
+                num_points = k # temp fix
+                for i in range(num_points):
+                    t_ratio = i / max(num_points - 1, 1)
+                    sx = G_x + t_ratio * dx
+                    sy = G_y + t_ratio * dy
+                    
+                    sensor = Sensor(sx, sy, self.base_range)
+                    self.add_sensor(sensor)
+
+                hexagons_queue.append((x + (tri_side / 2), y + (5 * tri_height)))
+                hexagons_queue.append((x + (tri_side * 4.5), y + (3 * tri_height)))
+                hexagons_queue.append((x + (tri_side * 4), y + (-2 * tri_height)))
+            
+
+
     
-
     def covered_area(self):
         raw_union = unary_union([s.coverage_area for s in self.sensors])
         return raw_union.intersection(self.area)

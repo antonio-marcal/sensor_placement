@@ -35,21 +35,21 @@ def plot_grid(grid: SensorGrid):
 area = Polygon([(0, 0), (10, 0), (8, 8), (2, 10), (0, 5)])
 
 k = 3
-d = 2
+d = 1
 delta = 0
 t = (0, 0)
 range = 1.5
 
 grid = SensorGrid(area, base_range=range)
-grid.create_hexagonal_grid(d=d, delta=delta, t=t)
+
+# grid.create_square_grid(d=d, delta=delta, t=t)
+grid.create_hexagonal_grid(d=d, delta=delta, t=t, k=k)
 
 print(f"Number of sensors: {len(grid.sensors)}")
 print(f"Missed sensors: {grid.missed_sensors}")
 
-print(f"Covered area: {grid.covered_area().area}")
 print(f"Percentage of covered area: {grid.covered_area().area / grid.area.area * 100:.2f}%")
-print(f"Uncovered area: {grid.uncovered_area().area}")
-
-print(f"Percentage of k-covered area (k = {k}): {grid.k_covered_area(k) / grid.area.area * 100:.2f}%")
+print(f"Percentage of k-covered area (k = 2): {grid.k_covered_area(2) / grid.area.area * 100:.2f}%")
+print(f"Percentage of k-covered area (k = 3): {grid.k_covered_area(3) / grid.area.area * 100:.2f}%")
 
 plot_grid(grid)
