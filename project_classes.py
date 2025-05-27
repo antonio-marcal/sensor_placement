@@ -85,6 +85,7 @@ class SensorGrid:
         t (tuple): Translation of the grid.
         k (int): Number of sensors per hexagonal region.
         """
+        
         # Bounding box
         min_x, min_y, max_x, max_y = self.area.bounds
         
