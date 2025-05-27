@@ -156,7 +156,7 @@ class SensorGrid:
         raw_union = unary_union([s.coverage_area for s in self.sensors])
         return raw_union.intersection(self.area)
 
-    def k_covered_area(self, k, resolution=10):
+    def k_covered_area(self, k, resolution=50):
         """
         Fast version: Return area (float) covered by at least k sensors, restricted to main area.
         Error margins around 4/5% with resolution=10.
@@ -206,7 +206,7 @@ class SensorGrid:
     
     def k_uncovered_area(self, k):
         """Return the part of the area not covered by at least k sensors"""
-        return self.area.difference(self.k_covered_area(k))
+        return self.area.area - self.k_covered_area(k)
 
     def number_of_sensors(self):
         return len(self.sensors)

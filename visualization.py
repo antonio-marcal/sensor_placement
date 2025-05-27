@@ -31,13 +31,12 @@ def plot_grid(grid: SensorGrid):
     ax.set_aspect('equal')
     plt.show()
 
-# Define the area (e.g., an irregular polygon)
 area = Polygon([(0, 0), (10, 0), (8, 8), (2, 10), (0, 5)])
 
 k = 3
-d = 1
-delta = 0
-t = (0, 0)
+d = 0.8859
+delta = 26.82
+t = (1.4982, 1.4924)
 range = 1.5
 
 grid = SensorGrid(area, base_range=range)
