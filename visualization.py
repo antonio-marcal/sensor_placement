@@ -43,8 +43,8 @@ area = Polygon([
 
 
 k = 3
-d = 0.8859
-delta = 50
+d = 1.5
+delta = 80
 t = (0, 0)
 range = 1.5
 
@@ -53,7 +53,7 @@ resolution = 10  # Resolution for area calculations
 grid = SensorGrid(area, base_range=range)
 
 # grid.create_square_grid(d=d, delta=delta, t=t)
-grid.create_hexagonal_grid(d=d, delta=delta, t=t, k=k)
+grid.create_square_grid(d=d, delta=delta, t=t, k=k)
 
 print(f"Number of sensors: {len(grid.sensors)}")
 print(f"Missed sensors: {grid.missed_sensors}")

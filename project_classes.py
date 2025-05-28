@@ -1,4 +1,5 @@
-from shapely.geometry import Point, Polygon, MultiPoint
+from shapely.geometry import Point, Polygon, box
+from shapely.affinity import rotate
 from shapely.ops import unary_union
 
 from collections import deque
@@ -39,8 +40,10 @@ class SensorGrid:
         t (tuple): Translation of the grid.
         k (int): Number of sensors per square region. (not used for this function, only to keep the interface consistent)
         """
-        # Calculate the bounding box of the area
         min_x, min_y, max_x, max_y = self.area.bounds
+        original_bbox = box(min_x, min_y, max_x, max_y)
+        rotated_bbox = rotate(original_bbox, -delta, origin='center', use_radians=False)
+        min_x, min_y, max_x, max_y = rotated_bbox.bounds
 
         # Adjust to keep sensors from levaing blank spots when rotating
         min_x -= (max_x - min_x) * 0.2
@@ -86,8 +89,10 @@ class SensorGrid:
         k (int): Number of sensors per hexagonal region.
         """
         
-        # Bounding box
         min_x, min_y, max_x, max_y = self.area.bounds
+        original_bbox = box(min_x, min_y, max_x, max_y)
+        rotated_bbox = rotate(original_bbox, -delta, origin='center', use_radians=False)
+        min_x, min_y, max_x, max_y = rotated_bbox.bounds
         
         # Adjust to keep sensors from levaing blank spots when rotating
         min_x -= (max_x - min_x) * 0.2
