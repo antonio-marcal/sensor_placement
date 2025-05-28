@@ -8,18 +8,26 @@ from multiprocessing import freeze_support
 
 from project_classes import SensorGrid
 
-area = Polygon([(0, 0), (10, 0), (8, 8), (2, 10), (0, 5)])
+# New York City area polygon (km)
+area = Polygon([
+    (0.0, 0.0), (5.0, -0.5), (10.0, 0.0), (13.0, 3.0), (14.0, 8.0),
+    (13.5, 12.0), (12.0, 17.0), (10.0, 22.0), (7.0, 27.0),
+    (4.0, 30.0), (2.0, 28.0), (1.0, 25.0), (0.5, 20.0), (0.0, 15.0)
+])
 
 SENSOR_RADIUS = 1.5
 SENSOR_MIN_DISTANCE = 0.5
-RESOLUTION = 20  # Resolution for area calculations
+RESOLUTION = 10  # Resolution for area calculations
 k = 3
 
-ALPHA = 1.0   # Weight for uncovered area
-BETA = 0.01   # Weight for number of sensors
+ALPHA = 0.70   # Weight for uncovered area
+BETA = 0.30   # Weight for number of sensors (ratio of ideal sensors)
 
 MAX_ITER = 30  # Maximum number of iterations for optimization
-POP_SIZE = 10  # Population size for differential evolution
+POP_SIZE = 10   # Population size for differential evolution
+
+# Using the ideal sensors, since this helps keep the blance with alpha and beta regardless of the area size
+ideal_sensors = area.area / (SENSOR_RADIUS ** 2 * np.pi) * k
 
 def objective(params, area, k, resolution, alpha, beta, shape = "Square"):
     d, delta_deg, tx, ty = params
@@ -38,7 +46,7 @@ def objective(params, area, k, resolution, alpha, beta, shape = "Square"):
     uncovered_area = total_area - covered_area
     num_sensors = grid.number_of_sensors()
 
-    cost = alpha * (uncovered_area / total_area ) + beta * num_sensors
+    cost = alpha * (uncovered_area / total_area ) + beta * (num_sensors / ideal_sensors)
     return cost
 
 def log_to_csv(d, delta, tx, ty, uncovered_area, num_sensors, cost, max_iter, resolution, alpha, beta, popsize, filename='optimization_log.csv'):
@@ -125,4 +133,4 @@ def main(shape):
 
 if __name__ == '__main__':
     freeze_support()
-    main("Hexagonal") 
+    main("Square") 

@@ -40,12 +40,10 @@ area = Polygon([
     (4.0, 30.0), (2.0, 28.0), (1.0, 25.0), (0.5, 20.0), (0.0, 15.0)
 ])
 
-
-
 k = 3
-d = 1.5
-delta = 80
-t = (0, 0)
+d = 1.4722
+delta = 43.07
+t = (1.2899, 0.4227)
 range = 1.5
 
 resolution = 10  # Resolution for area calculations
