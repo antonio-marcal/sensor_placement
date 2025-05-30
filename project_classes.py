@@ -139,15 +139,25 @@ class SensorGrid:
                 
                 dx = H_x - G_x
                 dy = H_y - G_y
+                
+                centre_x, centre_y = G_x + dx / 2, G_y + dy / 2
+                # Centre
+                if k % 2 == 1:
+                    sensor = Sensor(centre_x, centre_y, self.base_range)
+                    self.add_sensor(sensor)
 
-                # TODO: Fix this. It's terrible.
-                num_points = min(k, int(tri_side // d) + 1)
-                num_points = k # temp fix
-                for i in range(num_points):
-                    t_ratio = i / max(num_points - 1, 1)
-                    sx = G_x + t_ratio * dx
-                    sy = G_y + t_ratio * dy
-                    
+                for i in range(k - 1):
+
+                    sign = -1 if i % 2 == 0 else 1
+                    step = (i // 2) + 1
+
+                    # Distance along unit vector
+                    offset_x = sign * step * d * (dx / tri_side)
+                    offset_y = sign * step * d * (dy / tri_side)
+
+                    sx = centre_x + offset_x
+                    sy = centre_y + offset_y
+
                     sensor = Sensor(sx, sy, self.base_range)
                     self.add_sensor(sensor)
 
@@ -155,9 +165,6 @@ class SensorGrid:
                 hexagons_queue.append((x + (tri_side * 4.5), y + (3 * tri_height)))
                 hexagons_queue.append((x + (tri_side * 4), y + (-2 * tri_height)))
             
-
-
-    
     def covered_area(self):
         raw_union = unary_union([s.coverage_area for s in self.sensors])
         return raw_union.intersection(self.area)

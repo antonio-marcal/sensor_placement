@@ -16,12 +16,12 @@ area = Polygon([
 ])
 
 SENSOR_RADIUS = 1.5
-SENSOR_MIN_DISTANCE = 0.5
+SENSOR_MIN_DISTANCE = 0.1
 RESOLUTION = 10  # Resolution for area calculations
 k = 3
 
-ALPHA = 0.70   # Weight for uncovered area
-BETA = 0.30   # Weight for number of sensors (ratio of ideal sensors)
+ALPHA = 0.8   # Weight for uncovered area
+BETA = 0.2   # Weight for number of sensors (ratio of ideal sensors)
 
 MAX_ITER = 30  # Maximum number of iterations for optimization
 POP_SIZE = 10   # Population size for differential evolution
@@ -78,14 +78,24 @@ def counter_callback(xk, convergence):
     return False
 
 # TODO: make t bounds dynamic with d
-bounds = [
+bounds_square = [
     (SENSOR_MIN_DISTANCE, SENSOR_RADIUS),  # d
     (0, 90),                                   # delta (degrees)
     (0, SENSOR_RADIUS),   # t_x
     (0, SENSOR_RADIUS),   # t_y
 ]
 
+bounds_hexagon = [
+    (SENSOR_MIN_DISTANCE, 2 * SENSOR_RADIUS / 3),  # d
+    (0, 180),                                      # delta (degrees)
+    (0, SENSOR_RADIUS),   # t_x
+    (0, SENSOR_RADIUS),   # t_y
+]
+
 def main(shape):
+
+    bounds = bounds_square if shape == "Square" else bounds_hexagon
+
     result = differential_evolution(
         objective,
         bounds,
@@ -96,7 +106,7 @@ def main(shape):
         tol=1e-3,
         # callback=counter_callback,
         disp=True,
-        seed=42,
+        seed=48,
         updating='deferred',
         workers=-1  # Use all CPU cores if available
     )
@@ -133,4 +143,4 @@ def main(shape):
 
 if __name__ == '__main__':
     freeze_support()
-    main("Square") 
+    main("Hexagonal") 
