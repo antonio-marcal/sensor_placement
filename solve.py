@@ -23,13 +23,15 @@ k = 3
 ALPHA = 0.8   # Weight for uncovered area
 BETA = 0.2   # Weight for number of sensors (ratio of ideal sensors)
 
+EPS = 0.0368  # Epsilon value for epsilon-constraint  (max uncovered area allowed)
+
 MAX_ITER = 30  # Maximum number of iterations for optimization
 POP_SIZE = 10   # Population size for differential evolution
 
 # Using the ideal sensors, since this helps keep the blance with alpha and beta regardless of the area size
 ideal_sensors = area.area / (SENSOR_RADIUS ** 2 * np.pi) * k
 
-def objective(params, area, k, resolution, alpha, beta, shape = "Square"):
+def ws_objective(params, area, k, resolution, alpha, beta, shape = "Square"):
     d, delta_deg, tx, ty = params
 
     # With square grids, the value of t is parameterized with d
@@ -53,6 +55,35 @@ def objective(params, area, k, resolution, alpha, beta, shape = "Square"):
 
     cost = alpha * (uncovered_area / total_area ) + beta * (num_sensors / ideal_sensors)
     return cost
+
+def epsilon_objective(params, area, k, resolution, shape="Square", eps=0.9, ideal_sensors=None):
+
+    d, delta_deg, tx, ty = params
+
+    # With square grids, the value of t is parameterized with d
+    if shape == "Square":
+        tx *= d
+        ty *= d
+
+    grid = SensorGrid(area_polygon=area, base_range=SENSOR_RADIUS)
+
+    if shape == "Square":
+        grid.create_square_grid(d=d, delta=delta_deg, t=(tx, ty))
+    elif shape == "Hexagonal":
+        grid.create_hexagonal_grid(d=d, delta=delta_deg, t=(tx, ty), k=k)
+    else:
+        raise ValueError(f"Unknown shape: {shape}. Supported shapes are 'Square' and 'Hexagonal'.")
+
+    total_area = area.area
+    covered_area = grid.k_covered_area(k=k, resolution=resolution)
+    uncovered_area = total_area - covered_area
+    num_sensors = grid.number_of_sensors()
+
+    if uncovered_area / total_area > EPS:
+        return 1e6  # Large penalty for infeasible solutions
+
+    return num_sensors / ideal_sensors
+   
 
 def log_to_csv(d, delta, tx, ty, uncovered_area, num_sensors, cost, max_iter, resolution, alpha, beta, popsize, filename='optimization_log.csv'):
     file_exists = os.path.isfile(filename)
@@ -82,7 +113,6 @@ def counter_callback(xk, convergence):
     
     return False
 
-# TODO: make t bounds dynamic with d
 bounds_square = [
     (SENSOR_MIN_DISTANCE, SENSOR_RADIUS),  # d
     (0, 90),                                   # delta (degrees)
@@ -97,26 +127,46 @@ bounds_hexagon = [
     (0, SENSOR_RADIUS),   # t_y
 ]
 
-def main(shape):
+def main(shape, strat = 'WS'):
 
     bounds = bounds_square if shape == "Square" else bounds_hexagon
 
-    result = differential_evolution(
-        objective,
-        bounds,
-        args=(area, k, RESOLUTION, ALPHA, BETA, shape),
-        strategy='best1bin',
-        maxiter=MAX_ITER,
-        popsize=POP_SIZE,
-        tol=1e-3,
-        # callback=counter_callback,
-        disp=True,
-        seed=48,
-        updating='deferred',
-        workers=-1  # Use all CPU cores if available
-    )
+    if strat == 'WS':
+        result = differential_evolution(
+            ws_objective,
+            bounds,
+            args=(area, k, RESOLUTION, ALPHA, BETA, shape),
+            strategy='best1bin',
+            maxiter=MAX_ITER,
+            popsize=POP_SIZE,
+            tol=1e-3,
+            # callback=counter_callback,
+            disp=True,
+            seed=48,
+            updating='deferred',
+            workers=-1  # Use all CPU cores if available
+        )
+    elif strat == 'EPS':
+
+        result = differential_evolution(
+            epsilon_objective,
+            bounds,
+            args=(area, k, RESOLUTION, shape, EPS, ideal_sensors),
+            strategy='best1bin',
+            maxiter=MAX_ITER,
+            popsize=POP_SIZE,
+            tol=1e-3,
+            seed=48,
+            disp=True,
+            updating='deferred',
+            workers=-1
+        )
+
 
     best_d, best_delta, best_tx, best_ty = result.x
+    best_tx = best_tx * best_d if shape == "Square" else best_tx
+    best_ty = best_ty * best_d if shape == "Square" else best_ty
+
     print(f"Optimal d: {best_d:.4f}")
     print(f"Optimal delta: {best_delta:.2f}°")
     print(f"Optimal translation: ({best_tx:.4f}, {best_ty:.4f})")
@@ -148,4 +198,4 @@ def main(shape):
 
 if __name__ == '__main__':
     freeze_support()
-    main("Square")
+    main("Square", "EPS")
