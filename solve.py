@@ -31,7 +31,12 @@ ideal_sensors = area.area / (SENSOR_RADIUS ** 2 * np.pi) * k
 
 def objective(params, area, k, resolution, alpha, beta, shape = "Square"):
     d, delta_deg, tx, ty = params
-    
+
+    # With square grids, the value of t is parameterized with d
+    if shape == "Square":
+        tx *= d
+        ty *= d
+
     grid = SensorGrid(area_polygon=area, base_range=SENSOR_RADIUS)
 
     if shape == "Square":
@@ -81,8 +86,8 @@ def counter_callback(xk, convergence):
 bounds_square = [
     (SENSOR_MIN_DISTANCE, SENSOR_RADIUS),  # d
     (0, 90),                                   # delta (degrees)
-    (0, SENSOR_RADIUS),   # t_x
-    (0, SENSOR_RADIUS),   # t_y
+    (0, 1),   # t_x
+    (0, 1),   # t_y
 ]
 
 bounds_hexagon = [
@@ -143,4 +148,4 @@ def main(shape):
 
 if __name__ == '__main__':
     freeze_support()
-    main("Hexagonal") 
+    main("Square")
