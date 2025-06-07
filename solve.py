@@ -8,6 +8,9 @@ from multiprocessing import freeze_support
 
 from project_classes import SensorGrid
 
+from functools import partial
+from scipy.optimize import minimize, NonlinearConstraint
+
 # New York City area polygon (km)
 area = Polygon([
     (0.0, 0.0), (5.0, -0.5), (10.0, 0.0), (13.0, 3.0), (14.0, 8.0),
@@ -23,7 +26,7 @@ k = 3
 ALPHA = 0.8   # Weight for uncovered area
 BETA = 0.2   # Weight for number of sensors (ratio of ideal sensors)
 
-EPS = 0.0368  # Epsilon value for epsilon-constraint  (max uncovered area allowed)
+EPS = 0.95  # Epsilon value for epsilon-constraint  (min covered area allowed)
 
 MAX_ITER = 30  # Maximum number of iterations for optimization
 POP_SIZE = 10   # Population size for differential evolution
@@ -56,7 +59,7 @@ def ws_objective(params, area, k, resolution, alpha, beta, shape = "Square"):
     cost = alpha * (uncovered_area / total_area ) + beta * (num_sensors / ideal_sensors)
     return cost
 
-def epsilon_objective(params, area, k, resolution, shape="Square", eps=0.9, ideal_sensors=None):
+def epsilon_objective(params, area, k, resolution, shape="Square", eps=0.9, ideal_sensors=None, penalty=False):
 
     d, delta_deg, tx, ty = params
 
@@ -74,18 +77,36 @@ def epsilon_objective(params, area, k, resolution, shape="Square", eps=0.9, idea
     else:
         raise ValueError(f"Unknown shape: {shape}. Supported shapes are 'Square' and 'Hexagonal'.")
 
+
     total_area = area.area
     covered_area = grid.k_covered_area(k=k, resolution=resolution)
-    uncovered_area = total_area - covered_area
-    num_sensors = grid.number_of_sensors()
+    coverage_fraction = covered_area / total_area
 
-    if uncovered_area / total_area > EPS:
-        return 1e6  # Large penalty for infeasible solutions
+    sensor_cost = grid.number_of_sensors() / ideal_sensors
 
-    return num_sensors / ideal_sensors
+    # Soft penalty if constraint not met
+    if penalty and coverage_fraction < eps:
+        return sensor_cost + 1000 * (eps - coverage_fraction)
+
+    return sensor_cost
    
+def coverage_constraint(params, area, k, resolution, shape="Square"):
+    d, delta_deg, tx, ty = params
+    tx *= d
+    ty *= d
 
-def log_to_csv(d, delta, tx, ty, uncovered_area, num_sensors, cost, max_iter, resolution, alpha, beta, popsize, filename='optimization_log.csv'):
+    grid = SensorGrid(area_polygon=area, base_range=SENSOR_RADIUS)
+
+    if shape == "Square":
+        grid.create_square_grid(d=d, delta=delta_deg, t=(tx, ty))
+    elif shape == "Hexagonal":
+        grid.create_hexagonal_grid(d=d, delta=delta_deg, t=(tx, ty), k=k)
+
+    covered = grid.k_covered_area(k=k, resolution=resolution)
+
+    return covered / area.area
+
+def log_to_csv(d, delta, tx, ty, uncovered_area, num_sensors, cost, max_iter, resolution, alpha, beta, popsize, shape, strategy, filename='optimization_log.csv'):
     file_exists = os.path.isfile(filename)
     
     with open(filename, 'a', newline='') as csvfile:
@@ -95,14 +116,15 @@ def log_to_csv(d, delta, tx, ty, uncovered_area, num_sensors, cost, max_iter, re
         if not file_exists:
             writer.writerow([
                 'd', 'delta', 'tx', 'ty', 'uncovered_area', 'num_sensors',
-                'cost', 'max_iter', 'resolution', 'alpha', 'beta', 'popsize'
+                'cost', 'max_iter', 'resolution', 'alpha', 'beta', 'popsize', 'shape', 'strategy'
             ])
         
         # Write data row
         writer.writerow([
             round(d, 4), round(delta, 2), round(tx, 4), round(ty, 4),
             round(uncovered_area, 4), num_sensors,
-            round(cost, 4), max_iter, resolution, alpha, beta, popsize
+            round(cost, 4), max_iter, resolution, alpha, beta, popsize,
+            shape, strategy
         ])
         
 iteration_counter = 0
@@ -151,7 +173,7 @@ def main(shape, strat = 'WS'):
         result = differential_evolution(
             epsilon_objective,
             bounds,
-            args=(area, k, RESOLUTION, shape, EPS, ideal_sensors),
+            args=(area, k, RESOLUTION, shape, EPS, ideal_sensors, True),
             strategy='best1bin',
             maxiter=MAX_ITER,
             popsize=POP_SIZE,
@@ -159,6 +181,28 @@ def main(shape, strat = 'WS'):
             seed=48,
             disp=True,
             updating='deferred',
+            workers=-1
+        )
+    elif strat == 'EPS_NL':
+
+        constraint = NonlinearConstraint(
+            fun=lambda x: coverage_constraint(x, area, k, RESOLUTION, shape),
+            lb=EPS,
+            ub=1.0
+        )
+
+        result = differential_evolution(
+            func=epsilon_objective,
+            bounds=bounds,
+            args=(area, k, RESOLUTION, shape, EPS, ideal_sensors, False),
+            constraints=(constraint,),
+            strategy='best1bin',
+            maxiter=MAX_ITER,
+            popsize=POP_SIZE,
+            tol=1e-3,
+            disp=True,
+            polish=False,
+            seed=48,
             workers=-1
         )
 
@@ -192,10 +236,12 @@ def main(shape, strat = 'WS'):
         resolution=RESOLUTION,
         alpha=ALPHA,
         beta=BETA,
-        popsize=POP_SIZE
+        popsize=POP_SIZE,
+        shape=shape,
+        strategy=strat,
     )
 
 
 if __name__ == '__main__':
     freeze_support()
-    main("Square", "EPS")
+    main("Hexagonal", "EPS")
