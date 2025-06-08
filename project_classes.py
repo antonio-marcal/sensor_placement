@@ -105,7 +105,7 @@ class SensorGrid:
 
         # Height of equilateral triangle
         tri_side = self.base_range / 3
-        tri_height = math.sqrt(3) * self.base_range/ 6
+        tri_height = math.sqrt(3) * self.base_range / 6
 
         delta = math.radians(delta)
         cos_theta = math.cos(delta)
@@ -217,9 +217,9 @@ class SensorGrid:
         """Return the part of the area not covered by any sensor"""
         return self.area.difference(self.covered_area())
     
-    def k_uncovered_area(self, k):
+    def k_uncovered_area(self, k, resolution=50):
         """Return the part of the area not covered by at least k sensors"""
-        return self.area.area - self.k_covered_area(k)
+        return self.area.area - self.k_covered_area(k, resolution=resolution)
 
     def number_of_sensors(self):
         return len(self.sensors)

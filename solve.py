@@ -12,11 +12,46 @@ from functools import partial
 from scipy.optimize import minimize, NonlinearConstraint
 
 # New York City area polygon (km)
-area = Polygon([
+area_ny = Polygon([
     (0.0, 0.0), (5.0, -0.5), (10.0, 0.0), (13.0, 3.0), (14.0, 8.0),
     (13.5, 12.0), (12.0, 17.0), (10.0, 22.0), (7.0, 27.0),
     (4.0, 30.0), (2.0, 28.0), (1.0, 25.0), (0.5, 20.0), (0.0, 15.0)
 ])
+
+area_lac = Polygon([
+    (2, 75),
+    (18, 40),
+    (15, 30),
+    (0, 13),
+    (38, 0),
+    (48, 4),
+    (55, 13),
+    (65, 13),
+    (72, 40),
+    (75, 75)
+])
+
+area_kz = Polygon([
+    (0, 1),
+    (4.5, 1),
+    (4.5, 0),
+    (5, 0),
+    (5, 1),
+    (6, 1),
+    (6, 3),
+    (4.5, 3),
+    (4.5, 6),
+    (6, 7.2),
+    (5.5, 8),
+    (4, 7),
+    (2.5, 7),
+    (2.5, 5),
+    (.7, 5),
+    (.7, 7),
+    (0, 7)
+])
+
+area = area_ny
 
 SENSOR_RADIUS = 1.5
 SENSOR_MIN_DISTANCE = 0.1
@@ -34,7 +69,7 @@ POP_SIZE = 10   # Population size for differential evolution
 # Using the ideal sensors, since this helps keep the blance with alpha and beta regardless of the area size
 ideal_sensors = area.area / (SENSOR_RADIUS ** 2 * np.pi) * k
 
-def ws_objective(params, area, k, resolution, alpha, beta, shape = "Square"):
+def ws_objective(params, area, k, resolution, alpha, beta, shape = "Square", sensor_range=SENSOR_RADIUS):
     d, delta_deg, tx, ty = params
 
     # With square grids, the value of t is parameterized with d
@@ -42,7 +77,7 @@ def ws_objective(params, area, k, resolution, alpha, beta, shape = "Square"):
         tx *= d
         ty *= d
 
-    grid = SensorGrid(area_polygon=area, base_range=SENSOR_RADIUS)
+    grid = SensorGrid(area_polygon=area, base_range=sensor_range)
 
     if shape == "Square":
         grid.create_square_grid(d=d, delta=delta_deg, t=(tx, ty))
@@ -59,7 +94,7 @@ def ws_objective(params, area, k, resolution, alpha, beta, shape = "Square"):
     cost = alpha * (uncovered_area / total_area ) + beta * (num_sensors / ideal_sensors)
     return cost
 
-def epsilon_objective(params, area, k, resolution, shape="Square", eps=0.9, ideal_sensors=None, penalty=False):
+def epsilon_objective(params, area, k, resolution, shape="Square", eps=0.9, ideal_sensors=None, penalty=False, sensor_range=SENSOR_RADIUS):
 
     d, delta_deg, tx, ty = params
 
@@ -68,7 +103,7 @@ def epsilon_objective(params, area, k, resolution, shape="Square", eps=0.9, idea
         tx *= d
         ty *= d
 
-    grid = SensorGrid(area_polygon=area, base_range=SENSOR_RADIUS)
+    grid = SensorGrid(area_polygon=area, base_range=sensor_range)
 
     if shape == "Square":
         grid.create_square_grid(d=d, delta=delta_deg, t=(tx, ty))
@@ -229,7 +264,7 @@ def main(shape, strat = 'WS'):
         delta=best_delta,
         tx=best_tx,
         ty=best_ty,
-        uncovered_area=best_area.k_uncovered_area(k=k)/ best_area.area.area,
+        uncovered_area=best_area.k_uncovered_area(k=k, resolution=RESOLUTION)/ best_area.area.area,
         num_sensors=best_area.number_of_sensors(),
         cost=result.fun,
         max_iter=MAX_ITER,
