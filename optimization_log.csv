@@ -1,4 +1,4 @@
-d,delta,tx,ty,uncovered_area,num_sensors,cost,max_iter,resolution,alpha,beta,popsize,shape,strategy
+d,delta,tx,ty,uncovered_area,num_sensors,cost,max_iter,resolution,alpha,beta,popsize,shape,strategy,f1
 1.3578,43.43,0.9167,0.5968,0.124,44,0.5783,30,10,1.0,0.01,10
 1.3734,45.16,0.5599,0.6538,0.1914,40,0.5018,30,10,0.5,0.01,10
 0.8859,26.82,1.4982,1.4924,0.0641,48,0.5626,30,10,1.0,0.01,10

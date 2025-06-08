@@ -141,7 +141,7 @@ def coverage_constraint(params, area, k, resolution, shape="Square"):
 
     return covered / area.area
 
-def log_to_csv(d, delta, tx, ty, uncovered_area, num_sensors, cost, max_iter, resolution, alpha, beta, popsize, shape, strategy, filename='optimization_log.csv'):
+def log_to_csv(d, delta, tx, ty, uncovered_area, num_sensors, cost, max_iter, resolution, alpha, beta, popsize, shape, strategy, f1, filename='optimization_log.csv'):
     file_exists = os.path.isfile(filename)
     
     with open(filename, 'a', newline='') as csvfile:
@@ -151,7 +151,7 @@ def log_to_csv(d, delta, tx, ty, uncovered_area, num_sensors, cost, max_iter, re
         if not file_exists:
             writer.writerow([
                 'd', 'delta', 'tx', 'ty', 'uncovered_area', 'num_sensors',
-                'cost', 'max_iter', 'resolution', 'alpha', 'beta', 'popsize', 'shape', 'strategy'
+                'cost', 'max_iter', 'resolution', 'alpha', 'beta', 'popsize', 'shape', 'strategy', 'f1'
             ])
         
         # Write data row
@@ -159,7 +159,7 @@ def log_to_csv(d, delta, tx, ty, uncovered_area, num_sensors, cost, max_iter, re
             round(d, 4), round(delta, 2), round(tx, 4), round(ty, 4),
             round(uncovered_area, 4), num_sensors,
             round(cost, 4), max_iter, resolution, alpha, beta, popsize,
-            shape, strategy
+            shape, strategy, f1
         ])
         
 iteration_counter = 0
@@ -274,6 +274,7 @@ def main(shape, strat = 'WS'):
         popsize=POP_SIZE,
         shape=shape,
         strategy=strat,
+        f1=best_area.number_of_sensors() / ideal_sensors
     )
 
 
